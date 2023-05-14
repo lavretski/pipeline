@@ -73,13 +73,18 @@ class DlinearModel(nn.Module):
 
     def forward(self, x):
         # x: [Batch, Input length, Channel]
-        seasonal_init, trend_init = self.decompsition(x)
-        seasonal_init, trend_init = seasonal_init.permute(0, 2, 1), trend_init.permute(0, 2, 1)
-        seasonal_output = self.Linear_Seasonal(seasonal_init)
-        trend_output = self.Linear_Trend(trend_init)
+        b, i, c = x.size()
+        res = torch.zeros(b, self.pred_len, c)
+        for i in range(33):
+            z = x[:, :, i * 54:(i + 1) * 54]
+            seasonal_init, trend_init = self.decompsition(z)
+            seasonal_init, trend_init = seasonal_init.permute(0, 2, 1), trend_init.permute(0, 2, 1)
+            seasonal_output = self.Linear_Seasonal(seasonal_init)
+            trend_output = self.Linear_Trend(trend_init)
 
-        x = seasonal_output + trend_output
-        return torch.clip(x.permute(0, 2, 1), min=0)
+            z = seasonal_output + trend_output
+            res[:, :, i * 54:(i + 1) * 54] = torch.clip(z.permute(0, 2, 1), min=0)  # [Batch, Output length, Channel]
+        return res
 
 
 class NlinearModel(nn.Module):
@@ -95,8 +100,13 @@ class NlinearModel(nn.Module):
 
     def forward(self, x):
         # x: [Batch, Input length, Channel]
-        seq_last = x[:, -1:, :].detach()
-        x = x - seq_last
-        x = self.Linear(x.permute(0, 2, 1)).permute(0, 2, 1)
-        x = x + seq_last
-        return torch.clip(x, min=0)  # [Batch, Output length, Channel]
+        b, i, c = x.size()
+        res = torch.zeros(b, self.pred_len, c)
+        for i in range(33):
+            z = x[:, :, i*54:(i+1)*54]
+            seq_last = z[:, -1:, :].detach()
+            z = z - seq_last
+            z = self.Linear(z.permute(0, 2, 1)).permute(0, 2, 1)
+            z = z + seq_last
+            res[:, :, i*54:(i+1)*54] = torch.relu(z)  # [Batch, Output length, Channel]
+        return res

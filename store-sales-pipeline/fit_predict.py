@@ -22,7 +22,7 @@ def fit_predict(sales, device):
     optimizer = torch.optim.Adam(model.parameters(), lr=lr)
     scheduler = ReduceLROnPlateau(optimizer, patience=patience_scheduler, factor=factor)
     scaler = MinMaxLogScaler(feature_range=feature_range)
-    train_dataset = TimeSeriesDataset(data=sales[:-16], seq_len=seq_len, pred_len=16, scaler=scaler)
+    train_dataset = TimeSeriesDataset(data=sales, seq_len=seq_len, pred_len=16, scaler=scaler)
     train_loader = TimeSeriesDataLoader(train_dataset, batch_size=batch_size)
 
 

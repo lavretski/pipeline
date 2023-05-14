@@ -1,11 +1,6 @@
 import torch
+from preprocessing import inverse_transform
 
-@torch.no_grad()
-def inverse_transform(data, scaler):
-    shape = data.size()
-    data = data.detach().cpu().numpy()
-    data = torch.tensor(scaler.inverse_transform(data.reshape(-1, 1)), dtype=torch.float32)
-    return data.reshape(*shape)
 
 
 @torch.no_grad()
