@@ -60,9 +60,62 @@ class MinMaxLogScaler:
         return x
 
 
-@torch.no_grad()
-def inverse_transform(data, scaler):
-    shape = data.size()
-    data = data.detach().cpu().numpy()
-    data = torch.tensor(scaler.inverse_transform(data.reshape(-1, 1)), dtype=torch.float32)
-    return data.reshape(*shape)
+class MinMaxLogFamilyScaler:
+    def __init__(self, feature_range=(0, 1)):
+        self.minmax_family_scalers = [MinMaxScaler(feature_range) for i in range(33)]
+
+    def transform(self, x):
+        x = torch.transpose(x, 0, 1)
+        shape = x.size()
+        seq_len = shape[1]
+        x = x.reshape(-1, 1)
+        res = np.zeros_like(x)
+        for i in range(33):
+            z = x[i * 54 * seq_len: (i + 1) * 54 * seq_len]
+            z = self.minmax_family_scalers[i].transform(z)
+            z = np.log(z + 1)
+            res[i * 54 * seq_len: (i + 1) * 54 * seq_len] = z
+        res = torch.tensor(res, dtype=torch.float32)
+        res = res.reshape(*shape)
+        res = torch.transpose(res, 0, 1)
+        return res
+
+    def inverse_transform(self, x):
+        x = torch.transpose(x, 0, 1)
+        shape = x.size()
+        seq_len = shape[1]
+        x = x.reshape(-1, 1)
+        res = np.zeros_like(x)
+        for i in range(33):
+            z = x[i * 54 * seq_len: (i + 1) * 54 * seq_len]
+            z = np.exp(z) - 1
+            z = self.minmax_family_scalers[i].inverse_transform(z)
+            res[i * 54 * seq_len: (i + 1) * 54 * seq_len] = z
+        res = torch.tensor(res, dtype=torch.float32)
+        res = res.reshape(*shape)
+        res = torch.transpose(res, 0, 1)
+        return res
+
+    def fit(self, x):
+        x = torch.transpose(x, 0, 1)
+        shape = x.size()
+        seq_len = shape[1]
+        x = x.reshape(-1, 1)
+        for i in range(33):
+            self.minmax_family_scalers[i].fit(x[i * 54 * seq_len: (i + 1) * 54 * seq_len])
+
+    def fit_transform(self, x):
+        x = torch.transpose(x, 0, 1)
+        shape = x.size()
+        seq_len = shape[1]
+        x = x.reshape(-1, 1)
+        res = np.zeros_like(x)
+        for i in range(33):
+            z = x[i * 54 * seq_len: (i + 1) * 54 * seq_len]
+            z = self.minmax_family_scalers[i].fit_transform(z)
+            z = np.log(z + 1)
+            res[i * 54 * seq_len: (i + 1) * 54 * seq_len] = z
+        res = torch.tensor(res, dtype=torch.float32)
+        res = res.reshape(*shape)
+        res = torch.transpose(res, 0, 1)
+        return res
