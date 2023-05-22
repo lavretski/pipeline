@@ -7,7 +7,6 @@ from get_data import get_family_list
 
 
 def horizons_to_submission(horizons):
-    print('making submission')
     pd_submission = pd.read_csv(os.path.join(path_to_data, 'test.csv'))
     pd_submission['sales'] = 0
     family_list = get_family_list()
